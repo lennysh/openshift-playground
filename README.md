@@ -1,0 +1,41 @@
+# openshift-playground
+
+Community scripts and utilities for OpenShift and Red Hat Ansible Automation Platform (AAP) operations.
+
+> **Note:** These tools are unofficial and not supported by Red Hat. Use at your own discretion in non-production environments first.
+
+## Contents
+
+| Path | Description |
+|------|-------------|
+| [restore-aap-crds/](restore-aap-crds/) | Re-apply AAP CRDs from the operator bundle image when definitions are missing or out of sync |
+
+## restore-aap-crds
+
+Restores CustomResourceDefinitions for AAP operator versions 2.4 through 2.7. CRDs are extracted from the official Red Hat operator bundle image and applied to the cluster with `oc apply`.
+
+**When to use:** CRDs were deleted or corrupted but the AAP operator subscription and InstallPlan are still present.
+
+```bash
+cd restore-aap-crds
+chmod +x restore-aap-crds.sh
+./restore-aap-crds.sh 2.7
+```
+
+When logged in with `oc`, the cluster pull secret is used automatically — no manual pull secret file is required.
+
+See [restore-aap-crds/README.md](restore-aap-crds/README.md) for supported versions, pull secret options, expected output, and troubleshooting.
+
+## Requirements
+
+Most scripts in this repo expect:
+
+- An active OpenShift login (`oc login`)
+- The OpenShift CLI (`oc`)
+- Common shell utilities (`bash`, `grep`, etc.)
+
+Individual tools may have additional requirements; check each folder's README.
+
+## Contributing
+
+Pull requests welcome. When adding a new tool, include a folder-level README and add it to the Contents table above.
