@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+#
+# restore-aap-crds - Re-apply AAP CustomResourceDefinitions from the operator bundle image.
+# Original concept by Michael Tipton (https://github.com/CastawayEGR)
 
 # Exit immediately if a command exits with a non-zero status
 set -e

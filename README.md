@@ -26,6 +26,8 @@ When logged in with `oc`, the cluster pull secret is used automatically — no m
 
 See [restore-aap-crds/README.md](restore-aap-crds/README.md) for supported versions, pull secret options, expected output, and troubleshooting.
 
+Original concept by [Michael Tipton](https://github.com/CastawayEGR).
+
 ## Requirements
 
 Most scripts in this repo expect:

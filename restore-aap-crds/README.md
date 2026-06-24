@@ -126,3 +126,7 @@ oc login
 **Cannot read cluster pull secret**
 
 Your `oc` user needs permission to read secrets in `openshift-config`. Use `--pull-secret` with a local registry config instead.
+
+## Credits
+
+Original concept by [Michael Tipton](https://github.com/CastawayEGR) ([@CastawayEGR](https://github.com/CastawayEGR)).
