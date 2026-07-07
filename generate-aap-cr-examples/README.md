@@ -9,6 +9,7 @@ Currently supports:
 - `AutomationController` → `controller.yml`
 - `AutomationHub` → `hub.yml`
 - `EDA` → `eda.yml`
+- `AnsibleAutomationPlatform` → `aap.yml` (2.5+; embeds full component specs under `spec.controller`, `spec.hub`, `spec.eda`)
 
 ## Prerequisites
 
@@ -31,7 +32,17 @@ chmod +x generate-aap-cr-examples.sh
 ./generate-aap-cr-examples.sh \
   --crd-dir ../dump-aap-crds/crd-dumps/2.7 \
   --output-dir ./out/2.7 \
-  --kinds AutomationController,AutomationHub
+  --kinds AnsibleAutomationPlatform
+```
+
+For AAP 2.5+ platform CRs, pass all four CRD files in the same `--crd-dir` (platform + component CRDs):
+
+```bash
+python3 generate-aap-cr-examples.py \
+  --version 2.5 \
+  --crd-dir /path/to/aap-notes/config-examples/.crd-dumps/2.5 \
+  --output-dir /path/to/aap-notes/config-examples/AAP25/openshift \
+  --kinds AnsibleAutomationPlatform
 ```
 
 ### Options

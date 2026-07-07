@@ -5,8 +5,8 @@ Reads CRD dumps (for example from ../dump-aap-crds/crd-dumps/<version>/) and wri
 reference manifests that list every spec field: CRD defaults are set explicitly, and
 fields without defaults appear as commented placeholders.
 
-Designed for AutomationController, AutomationHub, and EDA CRs used in OpenShift
-operator deployments.
+Designed for AnsibleAutomationPlatform (2.5+), AutomationController, AutomationHub,
+and EDA CRs used in OpenShift operator deployments.
 """
 
 from __future__ import annotations
@@ -47,6 +47,39 @@ CRD_FILES = {
         "example-eda",
         "eda.yml",
     ),
+    "AnsibleAutomationPlatform": (
+        "aap.ansible.com_ansibleautomationplatforms.yaml",
+        "aap.ansible.com/v1alpha1",
+        "AnsibleAutomationPlatform",
+        "example-aap",
+        "aap.yml",
+    ),
+}
+
+# Nested platform blocks → component CRD used for exhaustive field generation.
+NESTED_COMPONENT_KINDS: dict[str, str] = {
+    "controller": "AutomationController",
+    "hub": "AutomationHub",
+    "eda": "EDA",
+}
+
+# Optional platform blocks without component CRD embedding (stubs only).
+PRESERVE_UNKNOWN_STUBS: dict[str, str] = {
+    "lightspeed": """\
+  # lightspeed:
+  #   disabled: true  # Opt-in; disabled by default
+  #   # Any AnsibleLightspeed.spec field is valid here (see lightspeed CRD dump)
+""",
+    "mcp": """\
+  # mcp:
+  #   disabled: true
+  #   # MCP server configuration (2.6+)
+""",
+    "metrics": """\
+  # metrics:
+  #   disabled: true
+  #   # Platform metrics configuration (2.6+)
+""",
 }
 
 # Example secret wiring for the aap-notes reference layout (override via --overrides-file later).
@@ -71,6 +104,14 @@ OVERRIDES: dict[str, dict[str, str]] = {
         "automation_server_url": "https://example-controller-aap.apps.example.com",
         "route_tls_secret": "eda-route-tls-secret",
         "admin_password_secret": "example-eda-admin-password",
+    },
+    "AnsibleAutomationPlatform": {
+        "admin_password_secret": "example-aap-admin-password",
+        "db_fields_encryption_secret": "example-aap-secret-key",
+        "database.database_secret": "aap-gateway-postgres-configuration",
+        "route_tls_secret": "aap-route-tls-secret",
+        "ingress_type": "Route",
+        "image_pull_policy": "IfNotPresent",
     },
 }
 
@@ -116,6 +157,21 @@ COMMENT_PATHS: dict[str, set[str]] = {
         "extra_settings",
         "redis.redis_secret",
         "automation_server_ssl_verify",
+    },
+    "AnsibleAutomationPlatform": {
+        "bundle_cacert_secret",
+        "ingress_tls_secret",
+        "image_pull_secrets",
+        "redis.redis_secret",
+        "redis.eda_redis_secret",
+        "extra_settings",
+        "feature_flags",
+        "hostname",
+        "public_base_url",
+        "lightspeed",
+        "mcp",
+        "metrics",
+        "gateway_timeouts",
     },
 }
 
@@ -558,7 +614,112 @@ SECTIONS: dict[str, list[tuple[str, list[str]]]] = {
         ("Scheduling & labels", ["service_account_annotations", "additional_labels"]),
         ("Extra configuration", ["extra_settings"]),
     ],
+    "AnsibleAutomationPlatform": [
+        (
+            "Platform secrets",
+            [
+                "admin_password_secret",
+                "db_fields_encryption_secret",
+                "bundle_cacert_secret",
+            ],
+        ),
+        ("Gateway database", ["database"]),
+        (
+            "Components",
+            ["controller", "hub", "eda", "lightspeed", "mcp", "metrics"],
+        ),
+        (
+            "Gateway API deployment",
+            ["api"],
+        ),
+        (
+            "Platform images",
+            [
+                "image",
+                "image_version",
+                "image_proxy",
+                "image_proxy_version",
+                "image_pull_policy",
+                "image_pull_secrets",
+                "postgres_image",
+                "postgres_image_version",
+                "redhat_registry",
+                "redhat_registry_ns",
+            ],
+        ),
+        (
+            "Ingress / Route / LoadBalancer",
+            [
+                "ingress_type",
+                "ingress_api_version",
+                "ingress_class_name",
+                "ingress_path",
+                "ingress_path_type",
+                "ingress_annotations",
+                "ingress_tls_secret",
+                "route_api_version",
+                "route_host",
+                "route_tls_secret",
+                "route_tls_termination_mechanism",
+                "route_annotations",
+                "loadbalancer_port",
+                "loadbalancer_protocol",
+                "service_type",
+                "service_annotations",
+                "service_account_annotations",
+                "hostname",
+                "public_base_url",
+                "gateway_timeouts",
+            ],
+        ),
+        (
+            "Redis cache",
+            ["redis", "redis_image", "redis_image_version", "redis_mode"],
+        ),
+        (
+            "Operator behavior",
+            ["no_log", "idle_aap", "extra_settings", "feature_flags"],
+        ),
+    ],
 }
+
+
+def contains_null(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, dict):
+        return any(contains_null(item) for item in value.values())
+    if isinstance(value, list):
+        return any(contains_null(item) for item in value)
+    return False
+
+
+def parse_yaml_block(block_lines: list[str]) -> Any:
+    if not block_lines:
+        return None
+    text = "root:\n" + "\n".join(block_lines)
+    try:
+        parsed = yaml.safe_load(text)
+    except yaml.YAMLError:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    return parsed.get("root")
+
+
+def comment_block_lines(block_lines: list[str]) -> list[str]:
+    commented: list[str] = []
+    for line in block_lines:
+        if not line.strip():
+            commented.append(line)
+            continue
+        stripped = line.lstrip()
+        indent = line[: len(line) - len(stripped)]
+        if stripped.startswith("#"):
+            commented.append(line)
+        else:
+            commented.append(f"{indent}# {stripped}")
+    return commented
 
 
 def resolve(root: dict[str, Any], schema: dict[str, Any] | None, depth: int = 0) -> dict[str, Any]:
@@ -603,10 +764,17 @@ def short_desc(schema: dict[str, Any]) -> str:
 
 
 class Generator:
-    def __init__(self, kind: str, crd_path: Path, namespace: str = "aap") -> None:
+    def __init__(
+        self,
+        kind: str,
+        crd_path: Path,
+        namespace: str = "aap",
+        crd_dir: Path | None = None,
+    ) -> None:
         self.kind = kind
         self.crd_path = crd_path
         self.namespace = namespace
+        self.crd_dir = crd_dir or crd_path.parent
         self.root = load_schema(crd_path)
         self.fname, self.api, self.k, self.meta_name, self.out_name = CRD_FILES[kind]
 
@@ -695,7 +863,7 @@ class Generator:
             lines.append(f'{"  " * indent}# {name}: {{}}')
             return
 
-        lines.append(f'{"  " * indent}{name}:')
+        child_lines: list[str] = []
         for key, value in sorted(props.items()):
             sub = resolve(self.root, value)
             subpath = f"{path}.{key}" if path else key
@@ -705,19 +873,29 @@ class Generator:
                 or path.split(".")[-1] in ALWAYS_EXPAND
                 or subpath in OVERRIDES.get(self.kind, {})
             ):
-                self.emit_object(key, sub, subpath, indent + 1, lines)
+                self.emit_object(key, sub, subpath, indent + 1, child_lines)
             elif "properties" in sub:
-                self.emit_scalar(key, sub, subpath, indent + 1, lines, force_comment=True)
+                self.emit_scalar(key, sub, subpath, indent + 1, child_lines, force_comment=True)
             else:
-                self.emit_scalar(key, sub, subpath, indent + 1, lines, force_comment=sub_force)
+                self.emit_scalar(key, sub, subpath, indent + 1, child_lines, force_comment=sub_force)
 
-    def generate(self) -> str:
+        parsed = parse_yaml_block(child_lines)
+        if parsed is None or contains_null(parsed):
+            ind = "  " * indent
+            lines.append(f"{ind}# {name}:")
+            lines.extend(comment_block_lines(child_lines))
+            return
+
+        lines.append(f'{"  " * indent}{name}:')
+        lines.extend(child_lines)
+
+    def ordered_spec_fields(self) -> tuple[dict[str, Any], list[str]]:
         spec = resolve(self.root, self.root["properties"]["spec"])
         props = spec.get("properties", {})
 
         ordered: list[str] = []
         seen: set[str] = set()
-        for _, fields in SECTIONS[self.kind]:
+        for _, fields in SECTIONS.get(self.kind, []):
             for field in fields:
                 if field in props and field not in seen:
                     ordered.append(field)
@@ -725,11 +903,53 @@ class Generator:
         for field in sorted(props):
             if field not in seen:
                 ordered.append(field)
+        return props, ordered
 
-        lines = [
+    def emit_nested_component_block(self, block_name: str, lines: list[str]) -> None:
+        component_kind = NESTED_COMPONENT_KINDS[block_name]
+        component_crd = self.crd_dir / CRD_FILES[component_kind][0]
+        _, _, component_k, component_meta_name, _ = CRD_FILES[component_kind]
+        lines.append(f"  {block_name}:")
+        lines.append("    disabled: false  # Platform-only; set true to skip this component")
+        lines.append(
+            f"    # name: {component_meta_name}  # Platform-only; register existing {component_k} CR"
+        )
+        nested = Generator(component_kind, component_crd, self.namespace, self.crd_dir)
+        lines.extend(nested.generate_spec_lines(base_indent=2))
+
+    def generate_spec_lines(self, base_indent: int = 1) -> list[str]:
+        props, ordered = self.ordered_spec_fields()
+        lines: list[str] = []
+        current_section: str | None = None
+
+        for field in ordered:
+            for section_name, section_fields in SECTIONS.get(self.kind, []):
+                if field == section_fields[0] and section_name != current_section:
+                    lines.append("")
+                    lines.append(f"{'  ' * base_indent}# --- {section_name} ---")
+                    current_section = section_name
+                    break
+            schema = resolve(self.root, props[field])
+            if "properties" in schema:
+                self.emit_object(field, schema, field, base_indent, lines)
+            else:
+                self.emit_scalar(field, schema, field, base_indent, lines)
+
+        return lines
+
+    def generate(self) -> str:
+        props, ordered = self.ordered_spec_fields()
+
+        header = [
             "---",
             f"# {self.kind} Custom Resource — exhaustive spec example",
             f"# Derived from CRD: {self.crd_path.name}",
+        ]
+        if self.kind == "AnsibleAutomationPlatform":
+            header.append(
+                "# Nested spec.controller / spec.hub / spec.eda blocks include every field from the component CRDs.",
+            )
+        header.extend([
             "# Fields with CRD defaults are set explicitly; unset options are commented with placeholders.",
             f"apiVersion: {self.api}",
             f"kind: {self.k}",
@@ -737,7 +957,8 @@ class Generator:
             f"  name: {self.meta_name}",
             f"  namespace: {self.namespace}",
             "spec:",
-        ]
+        ])
+        lines = header
 
         current_section: str | None = None
         for field in ordered:
@@ -748,6 +969,13 @@ class Generator:
                     current_section = section_name
                     break
             schema = resolve(self.root, props[field])
+            if field in NESTED_COMPONENT_KINDS and schema.get("x-kubernetes-preserve-unknown-fields"):
+                self.emit_nested_component_block(field, lines)
+                continue
+            if field in PRESERVE_UNKNOWN_STUBS and schema.get("x-kubernetes-preserve-unknown-fields"):
+                for line in PRESERVE_UNKNOWN_STUBS[field].rstrip("\n").split("\n"):
+                    lines.append(line if line.startswith("  ") or line.startswith("#") else f"  {line}")
+                continue
             if "properties" in schema:
                 self.emit_object(field, schema, field, 1, lines)
             else:
@@ -774,7 +1002,7 @@ def parse_args() -> argparse.Namespace:
         "--output-dir",
         type=Path,
         required=True,
-        help="Directory to write controller.yml, hub.yml, and/or eda.yml",
+        help="Directory to write generated CR YAML files",
     )
     parser.add_argument(
         "--namespace",
@@ -784,7 +1012,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--kinds",
         default="AutomationController,AutomationHub,EDA",
-        help="Comma-separated kinds to generate (default: all three)",
+        help="Comma-separated kinds to generate (add AnsibleAutomationPlatform for 2.5+)",
     )
     return parser.parse_args()
 
@@ -810,7 +1038,7 @@ def main() -> int:
             print(f"Missing CRD file: {crd_file}", file=sys.stderr)
             return 1
         out_path = args.output_dir / CRD_FILES[kind][4]
-        content = Generator(kind, crd_file, namespace=args.namespace).generate()
+        content = Generator(kind, crd_file, namespace=args.namespace, crd_dir=crd_dir).generate()
         out_path.write_text(content, encoding="utf-8")
         print(f"Wrote {out_path} ({len(content.splitlines())} lines)")
 
