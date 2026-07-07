@@ -120,4 +120,5 @@ Exact CRD counts vary by AAP version.
 
 ## Related
 
+- [generate-aap-cr-examples](../generate-aap-cr-examples/) — turn dumped CRDs into exhaustive Controller, Hub, and EDA example manifests
 - [restore-aap-crds](../restore-aap-crds/) — re-applies AAP CRDs from the operator bundle image to a cluster
