@@ -8,7 +8,20 @@ Community scripts and utilities for OpenShift and Red Hat Ansible Automation Pla
 
 | Path | Description |
 |------|-------------|
+| [dump-aap-crds/](dump-aap-crds/) | Discover installed AAP operators and dump version-specific CRDs to local YAML for schema reference |
 | [restore-aap-crds/](restore-aap-crds/) | Re-apply AAP CRDs from the operator bundle image when definitions are missing or out of sync |
+
+## dump-aap-crds
+
+Discovers AAP operator subscriptions across cluster namespaces (for example `aap24` through `aap27`) and dumps CustomResourceDefinitions to `dump-aap-crds/crd-dumps/` for use when generating example config files.
+
+```bash
+cd dump-aap-crds
+chmod +x dump-aap-crds.sh
+./dump-aap-crds.sh
+```
+
+See [dump-aap-crds/README.md](dump-aap-crds/README.md) for source modes, options, and troubleshooting.
 
 ## restore-aap-crds
 
