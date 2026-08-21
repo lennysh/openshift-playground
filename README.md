@@ -67,3 +67,9 @@ Individual tools may have additional requirements; check each folder's README.
 ## Contributing
 
 Pull requests welcome. When adding a new tool, include a folder-level README and add it to the Contents table above.
+
+## Related repos
+
+- [cheat-sheets](https://github.com/lennysh/cheat-sheets) — copy-paste notes (AAP, Automation Orchestrator, OpenShift, …)
+- [argocd-playground](https://github.com/lennysh/argocd-playground) — Argo CD GitOps for AAP, Automation Orchestrator, and related apps on OpenShift
+
