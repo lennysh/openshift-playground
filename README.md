@@ -10,6 +10,7 @@ Community scripts and utilities for OpenShift and Red Hat Ansible Automation Pla
 |------|-------------|
 | [dump-aap-crds/](dump-aap-crds/) | Discover installed AAP operators and dump version-specific CRDs to local YAML for schema reference |
 | [generate-aap-cr-examples/](generate-aap-cr-examples/) | Generate exhaustive Controller, Hub, and EDA CR example YAML from dumped CRD schemas |
+| [list-operator-images/](list-operator-images/) | Extract declared/runtime container images from an OLM CSV (live or file) |
 | [restore-aap-crds/](restore-aap-crds/) | Re-apply AAP CRDs from the operator bundle image when definitions are missing or out of sync |
 
 ## dump-aap-crds
@@ -35,6 +36,19 @@ chmod +x generate-aap-cr-examples.sh
 ```
 
 See [generate-aap-cr-examples/README.md](generate-aap-cr-examples/README.md) for options and workflow.
+
+## list-operator-images
+
+Extracts container image references from an OLM ClusterServiceVersion — either a live CSV (`--csv` + `-n`) or a YAML/JSON file (`--file`).
+
+```bash
+cd list-operator-images
+chmod +x list-operator-images.sh
+./list-operator-images.sh --csv aap-operator.v2.5.0-0.172.16.1.4 -n aap25
+./list-operator-images.sh --file ./csv.yaml --format list
+```
+
+See [list-operator-images/README.md](list-operator-images/README.md) for formats and runtime merge options.
 
 ## restore-aap-crds
 
