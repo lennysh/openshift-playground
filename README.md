@@ -11,6 +11,7 @@ Community scripts and utilities for OpenShift and Red Hat Ansible Automation Pla
 | [dump-aap-crds/](dump-aap-crds/) | Discover installed AAP operators and dump version-specific CRDs to local YAML for schema reference |
 | [generate-aap-cr-examples/](generate-aap-cr-examples/) | Generate exhaustive Controller, Hub, and EDA CR example YAML from dumped CRD schemas |
 | [list-operator-images/](list-operator-images/) | Extract declared/runtime container images from an OLM CSV (live or file) |
+| [readonly-no-secrets/](readonly-no-secrets/) | Build a `cluster-reader`-like ClusterRole without Secrets for learner / explore-only access |
 | [restore-aap-crds/](restore-aap-crds/) | Re-apply AAP CRDs from the operator bundle image when definitions are missing or out of sync |
 
 ## dump-aap-crds
@@ -49,6 +50,19 @@ chmod +x list-operator-images.sh
 ```
 
 See [list-operator-images/README.md](list-operator-images/README.md) for formats and runtime merge options.
+
+## readonly-no-secrets
+
+Creates a custom ClusterRole derived from OpenShift’s built-in `cluster-reader`, with Secrets (and a few escalation vectors) removed. Recommended path: bind it once to a Group (`cluster-explorers`), then add/remove learners with `oc adm groups`.
+
+```bash
+cd readonly-no-secrets
+chmod +x setup-group.sh apply-clusterrole.sh bind.sh generate-clusterrole.py
+./setup-group.sh alice@example.com bob@example.com
+# later: oc adm groups add-users cluster-explorers carol@example.com
+```
+
+See [readonly-no-secrets/README.md](readonly-no-secrets/README.md) for why `view` / `cluster-reader` alone are insufficient, manual `oc` steps, and security caveats.
 
 ## restore-aap-crds
 
